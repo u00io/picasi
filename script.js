@@ -1,43 +1,47 @@
-// Получаем элементы DOM
+// Get DOM elements
 const canvas = document.getElementById('previewCanvas');
 const ctx = canvas.getContext('2d');
 const textInput = document.getElementById('textInput');
+const backgroundColorInput = document.getElementById('backgroundColor');
 const frameColorInput = document.getElementById('frameColor');
-const colorValue = document.getElementById('colorValue');
-const shareFacebookBtn = document.getElementById('shareFacebook');
-const shareTelegramBtn = document.getElementById('shareTelegram');
-const shareInstagramBtn = document.getElementById('shareInstagram');
-const downloadBtn = document.getElementById('downloadBtn');
+const textColorInput = document.getElementById('textColor');
+const shareBtn = document.getElementById('shareBtn');
 
-// Параметры картинки
+// Image parameters
+let backgroundColor = '#ffffff';
 let frameColor = '#4a90e2';
+let textColor = '#333333';
+let frameStyle = 'solid';
 const frameWidth = 8;
 const padding = 30;
-let imageWidth, imageHeight;
 
-// Инициализация размера canvas
+// Fixed canvas resolution
+const imageWidth = 480;
+const imageHeight = 320;
+
+// Initialize canvas size
 function initCanvas() {
-    const container = document.querySelector('.preview-container');
-    const containerHeight = container.clientHeight - 20; // минус padding
-    
-    // Альбомная ориентация: соотношение сторон 16:9
-    imageWidth = Math.floor(containerHeight * 16 / 9);
-    imageHeight = containerHeight;
-    
-    // Ограничиваем максимальную ширину шириной контейнера
-    const containerWidth = container.clientWidth - 20;
-    if (imageWidth > containerWidth) {
-        imageWidth = containerWidth;
-        imageHeight = Math.floor(imageWidth * 9 / 16);
-    }
-    
+    // Canvas always has fixed resolution
     canvas.width = imageWidth;
     canvas.height = imageHeight;
+    
+    // Scale via CSS - don't change canvas element size
+    const container = document.querySelector('.preview-container');
+    const containerWidth = container.clientWidth - 20;
+    const containerHeight = container.clientHeight - 20;
+    
+    // Calculate scale to fit container
+    const scaleX = containerWidth / imageWidth;
+    const scaleY = containerHeight / imageHeight;
+    const scale = Math.min(scaleX, scaleY);
+    
+    canvas.style.width = (imageWidth * scale) + 'px';
+    canvas.style.height = (imageHeight * scale) + 'px';
     
     drawImage();
 }
 
-// Функция для подбора размера шрифта
+// Function to calculate optimal font size
 function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFontSize = 120) {
     if (!text || text.trim().length === 0) {
         return 40;
@@ -51,11 +55,11 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
     let fontSize = maxFontSize;
     let bestFitSize = minFontSize;
     
-    // Бинарный поиск для более эффективного подбора размера
+    // Binary search for more efficient size calculation
     while (fontSize >= minFontSize) {
         ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
         
-        // Разбиваем текст на строки
+        // Split text into lines
         const lines = [];
         let currentLine = '';
         
@@ -80,7 +84,7 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
             lines.push(currentLine);
         }
         
-        // Проверяем, помещается ли весь текст по высоте и ширине
+        // Check if all text fits in height and width
         const lineHeight = fontSize * 1.3;
         const totalHeight = lines.length * lineHeight;
         const maxLineWidth = lines.length > 0 ? Math.max(...lines.map(line => {
@@ -99,7 +103,7 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
     return Math.max(bestFitSize, minFontSize);
 }
 
-// Функция для разбивки текста на строки
+// Function to wrap text into lines
 function wrapText(text, maxWidth, fontSize) {
     if (!text || text.trim().length === 0) {
         return ['Your text here'];
@@ -116,29 +120,29 @@ function wrapText(text, maxWidth, fontSize) {
         
         if (metrics.width <= maxWidth) {
             currentLine = testLine;
-            // Если это последнее слово, добавляем строку
+            // If this is the last word, add the line
             if (i === words.length - 1) {
                 lines.push(currentLine);
             }
         } else {
-            // Если текущая строка не пуста, сохраняем её и начинаем новую
+            // If current line is not empty, save it and start a new one
             if (currentLine) {
                 lines.push(currentLine);
                 currentLine = words[i];
-                // Проверяем, не слишком ли длинное слово
+                // Check if word is too long
                 const wordMetrics = ctx.measureText(words[i]);
                 if (wordMetrics.width > maxWidth && words[i].length > 1) {
-                    // Если слово слишком длинное, пытаемся его разбить (упрощенная версия)
+                    // If word is too long, try to split it (simplified version)
                     lines.push(words[i]);
                     currentLine = '';
                 }
             } else {
-                // Если даже одно слово не помещается, все равно добавляем его
+                // If even one word doesn't fit, add it anyway
                 lines.push(words[i]);
                 currentLine = '';
             }
             
-            // Если это последнее слово и оно осталось в currentLine
+            // If this is the last word and it remained in currentLine
             if (i === words.length - 1 && currentLine) {
                 lines.push(currentLine);
             }
@@ -148,44 +152,159 @@ function wrapText(text, maxWidth, fontSize) {
     return lines.length > 0 ? lines : ['Your text here'];
 }
 
-// Функция рисования картинки
+// Functions for drawing different frame types
+function drawFrame(style) {
+    ctx.strokeStyle = frameColor;
+    ctx.fillStyle = frameColor;
+    ctx.lineWidth = frameWidth;
+    
+    const x = frameWidth / 2;
+    const y = frameWidth / 2;
+    const w = canvas.width - frameWidth;
+    const h = canvas.height - frameWidth;
+    
+    switch(style) {
+        case 'solid':
+            ctx.strokeRect(x, y, w, h);
+            break;
+            
+        case 'dashed':
+            ctx.setLineDash([15, 10]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.setLineDash([]);
+            break;
+            
+        case 'quote':
+            const lineY1 = y + 20; // Top line
+            const lineY2 = y + h - 20; // Bottom line
+            const centerX = x + w / 2;
+            const lineStartX = x + 30;
+            const lineEndX = x + w - 30;
+            const decorationRadius = 5;
+            
+            // Top line left of decoration
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, lineY1);
+            ctx.lineTo(centerX - 15, lineY1);
+            ctx.stroke();
+            
+            // Decorative element at top (circle)
+            ctx.beginPath();
+            ctx.arc(centerX, lineY1, decorationRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Top line right of decoration
+            ctx.beginPath();
+            ctx.moveTo(centerX + 15, lineY1);
+            ctx.lineTo(lineEndX, lineY1);
+            ctx.stroke();
+            
+            // Bottom line left of decoration
+            ctx.beginPath();
+            ctx.moveTo(lineStartX, lineY2);
+            ctx.lineTo(centerX - 15, lineY2);
+            ctx.stroke();
+            
+            // Decorative element at bottom (circle)
+            ctx.beginPath();
+            ctx.arc(centerX, lineY2, decorationRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bottom line right of decoration
+            ctx.beginPath();
+            ctx.moveTo(centerX + 15, lineY2);
+            ctx.lineTo(lineEndX, lineY2);
+            ctx.stroke();
+            break;
+            
+        case 'caution':
+            const tapeWidth = 20; // Tape width at the edge
+            const stripeWidth = 10; // Width of each stripe
+            const angle = 35; // Angle in degrees (not 45 to make it more noticeable)
+            const angleRad = angle * Math.PI / 180;
+            const yellowColor = '#ffd700'; // Yellow color
+            const blackColor = '#000000'; // Black color
+            
+            ctx.lineWidth = 1;
+            ctx.save();
+            
+            // Create drawing area - ring around the edge
+            ctx.beginPath();
+            ctx.rect(x - tapeWidth, y - tapeWidth, w + tapeWidth * 2, h + tapeWidth * 2);
+            ctx.rect(x + tapeWidth, y + tapeWidth, w - tapeWidth * 2, h - tapeWidth * 2);
+            ctx.clip('evenodd');
+            
+            // Move origin to center for convenience
+            const tapeCenterX = x + w / 2;
+            const tapeCenterY = y + h / 2;
+            
+            // Draw diagonal stripes covering the entire area
+            // Calculate number of stripes needed to cover the entire area
+            const maxDim = Math.max(w + tapeWidth * 2, h + tapeWidth * 2);
+            const diagonalLength = Math.sqrt(2) * maxDim;
+            const numStripes = Math.ceil(diagonalLength / stripeWidth) + 2;
+            
+            // Calculate offset for stripe start
+            const startOffset = -numStripes * stripeWidth / 2;
+            
+            for (let i = 0; i < numStripes; i++) {
+                const offset = startOffset + i * stripeWidth; // Remove multiplication by 2 so stripes are continuous without gaps
+                const isYellow = i % 2 === 0;
+                ctx.fillStyle = isYellow ? yellowColor : blackColor;
+                
+                // Draw slanted stripe covering the entire visible area
+                // Use large parallelogram at an angle
+                const stripeLength = diagonalLength * 2;
+                const halfLength = stripeLength / 2;
+                
+                ctx.save();
+                ctx.translate(tapeCenterX, tapeCenterY);
+                ctx.rotate(angleRad);
+                
+                ctx.beginPath();
+                ctx.rect(-halfLength, offset - stripeWidth / 2, stripeLength, stripeWidth);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            ctx.restore();
+            ctx.fillStyle = frameColor;
+            break;
+    }
+}
+
+// Function to draw image
 function drawImage() {
     const text = textInput.value.trim() || 'Your text here';
     
-    // Очистка canvas
+    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Рисуем фон (белый)
-    ctx.fillStyle = '#ffffff';
+    // Draw background
+    ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Рисуем рамку
-    ctx.strokeStyle = frameColor;
-    ctx.lineWidth = frameWidth;
-    ctx.strokeRect(
-        frameWidth / 2,
-        frameWidth / 2,
-        canvas.width - frameWidth,
-        canvas.height - frameWidth
-    );
+    // Draw frame
+    drawFrame(frameStyle);
     
-    // Область для текста (с отступами от рамки и padding)
+    // Text area (with offsets from frame and padding)
     const textAreaWidth = canvas.width - (frameWidth + padding) * 2;
     const textAreaHeight = canvas.height - (frameWidth + padding) * 2;
     
-    // Получаем оптимальный размер шрифта
+    // Get optimal font size
     const fontSize = getOptimalFontSize(text, textAreaWidth, textAreaHeight);
     
-    // Разбиваем текст на строки
+    // Split text into lines
     const lines = wrapText(text, textAreaWidth, fontSize);
     
-    // Настраиваем шрифт
+    // Set font
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
-    ctx.fillStyle = '#333333';
+    ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
-    // Рисуем текст по центру
+    // Draw text centered
     const startX = canvas.width / 2;
     const startY = canvas.height / 2;
     const lineHeight = fontSize * 1.3;
@@ -198,17 +317,39 @@ function drawImage() {
     });
 }
 
-// Обработчик изменения текста
+// Text input handler
 textInput.addEventListener('input', drawImage);
 
-// Обработчик изменения цвета рамки
-frameColorInput.addEventListener('input', (e) => {
-    frameColor = e.target.value;
-    colorValue.textContent = frameColor;
+// Background color change handler
+backgroundColorInput.addEventListener('input', (e) => {
+    backgroundColor = e.target.value;
     drawImage();
 });
 
-// Функция для скачивания картинки
+// Frame color change handler
+frameColorInput.addEventListener('input', (e) => {
+    frameColor = e.target.value;
+    drawImage();
+});
+
+// Text color change handler
+textColorInput.addEventListener('input', (e) => {
+    textColor = e.target.value;
+    drawImage();
+});
+
+// Frame style selection handlers
+const frameStyleButtons = document.querySelectorAll('.frame-style-btn');
+frameStyleButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        frameStyleButtons.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        frameStyle = e.target.dataset.frame;
+        drawImage();
+    });
+});
+
+// Function to download image
 function downloadImage() {
     canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
@@ -222,8 +363,8 @@ function downloadImage() {
     }, 'image/png');
 }
 
-// Функция для шаринга
-function shareImage(platform) {
+// Function to share image
+function shareImage() {
     canvas.toBlob((blob) => {
         const file = new File([blob], 'social-image.png', { type: 'image/png' });
         
@@ -237,35 +378,33 @@ function shareImage(platform) {
             });
         } else {
             // Fallback: download the image
-            if (platform === 'facebook') {
-                downloadImage();
-                alert('Image downloaded. Please upload it to Facebook manually.');
-            } else if (platform === 'telegram') {
-                downloadImage();
-                alert('Image downloaded. Please open Telegram and send it.');
-            } else if (platform === 'instagram') {
-                downloadImage();
-                alert('Image downloaded. Please upload it to Instagram manually.');
-            }
+            downloadImage();
         }
     }, 'image/png');
 }
 
-// Обработчики кнопок
-downloadBtn.addEventListener('click', downloadImage);
+// Button handler
+shareBtn.addEventListener('click', shareImage);
 
-shareFacebookBtn.addEventListener('click', () => shareImage('facebook'));
-shareTelegramBtn.addEventListener('click', () => shareImage('telegram'));
-shareInstagramBtn.addEventListener('click', () => shareImage('instagram'));
-
-// Инициализация при загрузке страницы
+// Initialize on page load
 window.addEventListener('load', () => {
     initCanvas();
     drawImage();
 });
 
-// Перерисовка при изменении размера окна
+// Redraw on window resize (only scale preview)
 window.addEventListener('resize', () => {
-    initCanvas();
+    const container = document.querySelector('.preview-container');
+    const containerWidth = container.clientWidth - 20;
+    const containerHeight = container.clientHeight - 20;
+    
+    // Calculate scale to fit container
+    const scaleX = containerWidth / imageWidth;
+    const scaleY = containerHeight / imageHeight;
+    const scale = Math.min(scaleX, scaleY);
+    
+    canvas.style.width = (imageWidth * scale) + 'px';
+    canvas.style.height = (imageHeight * scale) + 'px';
+    // Don't redraw canvas image - it has fixed size
 });
 
