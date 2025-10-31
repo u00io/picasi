@@ -2,11 +2,10 @@
 const canvas = document.getElementById('previewCanvas');
 const ctx = canvas.getContext('2d');
 const textInput = document.getElementById('textInput');
-const textColorInput = document.getElementById('textColor');
 const shareBtn = document.getElementById('shareBtn');
 
 // Image parameters
-let textColor = '#333333';
+let textColor = '#000000';
 let backgroundImage = ''; // Path to background image, empty string means no image
 const padding = 30;
 
@@ -261,10 +260,16 @@ function drawTextOnCanvas() {
 // Text input handler
 textInput.addEventListener('input', drawImage);
 
-// Text color change handler
-textColorInput.addEventListener('input', (e) => {
-    textColor = e.target.value;
-    drawImage();
+// Text color selection handlers
+const colorButtons = document.querySelectorAll('.color-btn');
+colorButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        colorButtons.forEach(b => b.classList.remove('active'));
+        const button = e.currentTarget;
+        button.classList.add('active');
+        textColor = button.dataset.color;
+        drawImage();
+    });
 });
 
 // Background image selection handlers

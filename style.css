@@ -140,30 +140,39 @@ body {
     border-color: #667eea;
 }
 
-.color-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    text-align: center;
+/* Color selection buttons */
+.color-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-.color-input {
-    width: 60px;
-    height: 60px;
-    border: none;
-    border-radius: 12px;
+.color-btn {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease;
+    padding: 0;
+    background: none;
 }
 
-.color-input:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+.color-btn:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
 }
 
-.color-input:active {
-    transform: scale(0.95);
+.color-btn.active {
+    border-color: #667eea;
+    border-width: 3px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+}
+
+.color-btn:active {
+    transform: translateY(0);
 }
 
 /* Checkbox styling */
