@@ -188,17 +188,22 @@ body {
 }
 
 .frame-style-btn {
-    padding: 10px 16px;
+    padding: 10px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     background: white;
     color: #333;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
-    flex: 1;
-    min-width: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100px;
+    height: 100px;
+    justify-content: center;
 }
 
 .frame-style-btn:hover {
@@ -216,6 +221,17 @@ body {
 
 .frame-style-btn:active {
     transform: scale(0.98);
+}
+
+.frame-preview {
+    width: 80px;
+    height: 60px;
+    border-radius: 4px;
+    display: block;
+}
+
+.frame-style-btn span {
+    font-size: 12px;
 }
 
 .share-buttons {

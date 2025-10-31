@@ -41,14 +41,9 @@ function initCanvas() {
     drawImage();
 }
 
-// Function to calculate optimal font size
+// Function to calculate optimal font size (preserves line breaks)
 function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFontSize = 120) {
     if (!text || text.trim().length === 0) {
-        return 40;
-    }
-    
-    const words = text.split(' ').filter(word => word.length > 0);
-    if (words.length === 0) {
         return 40;
     }
     
@@ -59,30 +54,41 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
     while (fontSize >= minFontSize) {
         ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
         
-        // Split text into lines
+        // Split by line breaks first
+        const paragraphs = text.split('\n');
         const lines = [];
-        let currentLine = '';
         
-        for (let i = 0; i < words.length; i++) {
-            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
-            const metrics = ctx.measureText(testLine);
+        // Process each paragraph separately
+        paragraphs.forEach(paragraph => {
+            if (paragraph.trim().length === 0) {
+                lines.push('');
+                return;
+            }
             
-            if (metrics.width <= maxWidth && i < words.length - 1) {
-                currentLine = testLine;
-            } else {
-                if (currentLine && metrics.width > maxWidth) {
-                    lines.push(currentLine);
-                    currentLine = words[i];
+            const words = paragraph.split(' ').filter(word => word.length > 0);
+            let currentLine = '';
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+                const metrics = ctx.measureText(testLine);
+                
+                if (metrics.width <= maxWidth && i < words.length - 1) {
+                    currentLine = testLine;
                 } else {
-                    lines.push(testLine);
-                    currentLine = '';
+                    if (currentLine && metrics.width > maxWidth) {
+                        lines.push(currentLine);
+                        currentLine = words[i];
+                    } else {
+                        lines.push(testLine);
+                        currentLine = '';
+                    }
                 }
             }
-        }
-        
-        if (currentLine) {
-            lines.push(currentLine);
-        }
+            
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+        });
         
         // Check if all text fits in height and width
         const lineHeight = fontSize * 1.3;
@@ -103,57 +109,203 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
     return Math.max(bestFitSize, minFontSize);
 }
 
-// Function to wrap text into lines
+// Function to wrap text into lines, preserving line breaks
 function wrapText(text, maxWidth, fontSize) {
     if (!text || text.trim().length === 0) {
         return ['Your text here'];
     }
     
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
-    const words = text.split(' ').filter(word => word.length > 0);
-    const lines = [];
-    let currentLine = '';
+    const allLines = [];
     
-    for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
-        const metrics = ctx.measureText(testLine);
+    // First, split by actual line breaks (\n)
+    const paragraphs = text.split('\n');
+    
+    // Process each paragraph separately
+    paragraphs.forEach(paragraph => {
+        if (paragraph.trim().length === 0) {
+            // Empty line - add it as empty line
+            allLines.push('');
+            return;
+        }
         
-        if (metrics.width <= maxWidth) {
-            currentLine = testLine;
-            // If this is the last word, add the line
-            if (i === words.length - 1) {
-                lines.push(currentLine);
-            }
-        } else {
-            // If current line is not empty, save it and start a new one
-            if (currentLine) {
-                lines.push(currentLine);
-                currentLine = words[i];
-                // Check if word is too long
-                const wordMetrics = ctx.measureText(words[i]);
-                if (wordMetrics.width > maxWidth && words[i].length > 1) {
-                    // If word is too long, try to split it (simplified version)
-                    lines.push(words[i]);
-                    currentLine = '';
+        // Split paragraph into words
+        const words = paragraph.split(' ').filter(word => word.length > 0);
+        let currentLine = '';
+        
+        for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine ? `${currentLine} ${words[i]}` : words[i];
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width <= maxWidth) {
+                currentLine = testLine;
+                // If this is the last word, add the line
+                if (i === words.length - 1) {
+                    allLines.push(currentLine);
                 }
             } else {
-                // If even one word doesn't fit, add it anyway
-                lines.push(words[i]);
-                currentLine = '';
-            }
-            
-            // If this is the last word and it remained in currentLine
-            if (i === words.length - 1 && currentLine) {
-                lines.push(currentLine);
+                // If current line is not empty, save it and start a new one
+                if (currentLine) {
+                    allLines.push(currentLine);
+                    currentLine = words[i];
+                    // Check if word is too long
+                    const wordMetrics = ctx.measureText(words[i]);
+                    if (wordMetrics.width > maxWidth && words[i].length > 1) {
+                        // If word is too long, add it anyway
+                        allLines.push(words[i]);
+                        currentLine = '';
+                    }
+                } else {
+                    // If even one word doesn't fit, add it anyway
+                    allLines.push(words[i]);
+                    currentLine = '';
+                }
+                
+                // If this is the last word and it remained in currentLine
+                if (i === words.length - 1 && currentLine) {
+                    allLines.push(currentLine);
+                }
             }
         }
-    }
+    });
     
-    return lines.length > 0 ? lines : ['Your text here'];
+    return allLines.length > 0 ? allLines : ['Your text here'];
+}
+
+// Function to draw frame preview on mini canvas (with fixed colors)
+function drawFramePreview(canvasEl, style) {
+    const previewCtx = canvasEl.getContext('2d');
+    const previewWidth = canvasEl.width;
+    const previewHeight = canvasEl.height;
+    
+    // Fixed colors for preview (not from settings)
+    const previewBgColor = '#ffffff';
+    const previewFrameColor = '#667eea';
+    const previewFrameWidth = 3;
+    
+    // Clear and fill background
+    previewCtx.clearRect(0, 0, previewWidth, previewHeight);
+    previewCtx.fillStyle = previewBgColor;
+    previewCtx.fillRect(0, 0, previewWidth, previewHeight);
+    
+    // Set frame color
+    previewCtx.strokeStyle = previewFrameColor;
+    previewCtx.fillStyle = previewFrameColor;
+    previewCtx.lineWidth = previewFrameWidth;
+    
+    const x = previewFrameWidth / 2;
+    const y = previewFrameWidth / 2;
+    const w = previewWidth - previewFrameWidth;
+    const h = previewHeight - previewFrameWidth;
+    
+    switch(style) {
+        case 'solid':
+            previewCtx.strokeRect(x, y, w, h);
+            break;
+            
+        case 'dashed':
+            previewCtx.setLineDash([8, 5]);
+            previewCtx.strokeRect(x, y, w, h);
+            previewCtx.setLineDash([]);
+            break;
+            
+        case 'quote':
+            const lineY1 = y + 10;
+            const lineY2 = y + h - 10;
+            const centerX = x + w / 2;
+            const lineStartX = x + 10;
+            const lineEndX = x + w - 10;
+            const decorationRadius = 2.5;
+            
+            previewCtx.beginPath();
+            previewCtx.moveTo(lineStartX, lineY1);
+            previewCtx.lineTo(centerX - 8, lineY1);
+            previewCtx.stroke();
+            
+            previewCtx.beginPath();
+            previewCtx.arc(centerX, lineY1, decorationRadius, 0, Math.PI * 2);
+            previewCtx.fill();
+            
+            previewCtx.beginPath();
+            previewCtx.moveTo(centerX + 8, lineY1);
+            previewCtx.lineTo(lineEndX, lineY1);
+            previewCtx.stroke();
+            
+            previewCtx.beginPath();
+            previewCtx.moveTo(lineStartX, lineY2);
+            previewCtx.lineTo(centerX - 8, lineY2);
+            previewCtx.stroke();
+            
+            previewCtx.beginPath();
+            previewCtx.arc(centerX, lineY2, decorationRadius, 0, Math.PI * 2);
+            previewCtx.fill();
+            
+            previewCtx.beginPath();
+            previewCtx.moveTo(centerX + 8, lineY2);
+            previewCtx.lineTo(lineEndX, lineY2);
+            previewCtx.stroke();
+            break;
+            
+        case 'caution':
+            const tapeWidth = 8;
+            const stripeWidth = 4;
+            const angle = 35;
+            const angleRad = angle * Math.PI / 180;
+            const yellowColor = '#ffd700';
+            const blackColor = '#000000';
+            
+            previewCtx.lineWidth = 1;
+            previewCtx.save();
+            
+            previewCtx.beginPath();
+            previewCtx.rect(x - tapeWidth, y - tapeWidth, w + tapeWidth * 2, h + tapeWidth * 2);
+            previewCtx.rect(x + tapeWidth, y + tapeWidth, w - tapeWidth * 2, h - tapeWidth * 2);
+            previewCtx.clip('evenodd');
+            
+            const tapeCenterX = x + w / 2;
+            const tapeCenterY = y + h / 2;
+            
+            const maxDim = Math.max(w + tapeWidth * 2, h + tapeWidth * 2);
+            const diagonalLength = Math.sqrt(2) * maxDim;
+            const numStripes = Math.ceil(diagonalLength / stripeWidth) + 2;
+            const startOffset = -numStripes * stripeWidth / 2;
+            
+            for (let i = 0; i < numStripes; i++) {
+                const offset = startOffset + i * stripeWidth;
+                const isYellow = i % 2 === 0;
+                previewCtx.fillStyle = isYellow ? yellowColor : blackColor;
+                
+                const stripeLength = diagonalLength * 2;
+                const halfLength = stripeLength / 2;
+                
+                previewCtx.save();
+                previewCtx.translate(tapeCenterX, tapeCenterY);
+                previewCtx.rotate(angleRad);
+                
+                previewCtx.beginPath();
+                previewCtx.rect(-halfLength, offset - stripeWidth / 2, stripeLength, stripeWidth);
+                previewCtx.fill();
+                
+                previewCtx.restore();
+            }
+            
+            previewCtx.restore();
+            break;
+    }
 }
 
 // Functions for drawing different frame types
 function drawFrame(style) {
+    // Reset any previous clipping path - start fresh
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    ctx.clip();
+    ctx.restore();
+    
+    // Save context state before drawing frame
+    ctx.save();
+    
     ctx.strokeStyle = frameColor;
     ctx.fillStyle = frameColor;
     ctx.lineWidth = frameWidth;
@@ -165,6 +317,7 @@ function drawFrame(style) {
     
     switch(style) {
         case 'solid':
+            ctx.setLineDash([]);
             ctx.strokeRect(x, y, w, h);
             break;
             
@@ -175,6 +328,7 @@ function drawFrame(style) {
             break;
             
         case 'quote':
+            ctx.setLineDash([]);
             const lineY1 = y + 20; // Top line
             const lineY2 = y + h - 20; // Bottom line
             const centerX = x + w / 2;
@@ -269,14 +423,29 @@ function drawFrame(style) {
             }
             
             ctx.restore();
+            // Restore frame drawing parameters after clipping
             ctx.fillStyle = frameColor;
+            ctx.strokeStyle = frameColor;
+            ctx.lineWidth = frameWidth;
+            ctx.setLineDash([]);
             break;
     }
+    
+    // Restore context state after drawing frame
+    ctx.restore();
 }
 
 // Function to draw image
 function drawImage() {
     const text = textInput.value.trim() || 'Your text here';
+    
+    // Save context state
+    ctx.save();
+    
+    // Reset clipping path to full canvas - start with fresh state
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    ctx.clip();
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -285,8 +454,14 @@ function drawImage() {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw frame
+    // Restore and save again before drawing frame
+    ctx.restore();
+    
+    // Draw frame (it will manage its own clipping and state)
     drawFrame(frameStyle);
+    
+    // Save state for text drawing
+    ctx.save();
     
     // Text area (with offsets from frame and padding)
     const textAreaWidth = canvas.width - (frameWidth + padding) * 2;
@@ -315,6 +490,9 @@ function drawImage() {
         const y = startTextY + (index * lineHeight);
         ctx.fillText(line, startX, y);
     });
+    
+    // Restore context state
+    ctx.restore();
 }
 
 // Text input handler
@@ -343,8 +521,10 @@ const frameStyleButtons = document.querySelectorAll('.frame-style-btn');
 frameStyleButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
         frameStyleButtons.forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        frameStyle = e.target.dataset.frame;
+        // Use currentTarget instead of target to always get the button, not child elements
+        const button = e.currentTarget;
+        button.classList.add('active');
+        frameStyle = button.dataset.frame;
         drawImage();
     });
 });
@@ -378,7 +558,7 @@ function shareImage() {
             });
         } else {
             // Fallback: download the image
-            downloadImage();
+                downloadImage();
         }
     }, 'image/png');
 }
@@ -386,10 +566,20 @@ function shareImage() {
 // Button handler
 shareBtn.addEventListener('click', shareImage);
 
+// Initialize frame previews
+function initFramePreviews() {
+    const previewCanvases = document.querySelectorAll('.frame-preview');
+    previewCanvases.forEach(canvas => {
+        const frameType = canvas.dataset.frameType;
+        drawFramePreview(canvas, frameType);
+    });
+}
+
 // Initialize on page load
 window.addEventListener('load', () => {
     initCanvas();
     drawImage();
+    initFramePreviews();
 });
 
 // Redraw on window resize (only scale preview)
