@@ -34,43 +34,42 @@
             </div>
 
             <div class="input-group">
-                <label>Colors:</label>
-                <div class="color-pickers-row">
-                    <div class="color-picker-item">
-                        <label for="backgroundColor" class="color-label">Background</label>
-                        <input type="color" id="backgroundColor" value="#ffffff" class="color-input">
-                    </div>
-                    <div class="color-picker-item">
-                        <label for="frameColor" class="color-label">Frame</label>
-                        <input type="color" id="frameColor" value="#4a90e2" class="color-input">
-                    </div>
-                    <div class="color-picker-item">
-                        <label for="textColor" class="color-label">Text</label>
-                        <input type="color" id="textColor" value="#333333" class="color-input">
-                    </div>
+                <label>Background image:</label>
+                <div class="image-buttons">
+                    <button class="image-btn active" data-image="">
+                        <span class="image-preview-text">None</span>
+                        <span>None</span>
+                    </button>
+                    <button class="image-btn" data-image="images/old_01.png">
+                        <img class="image-preview" src="images/old_01.png" alt="old_01" width="80" height="60">
+                        <span>Old 01</span>
+                    </button>
+                    <button class="image-btn" data-image="images/old_02.png">
+                        <img class="image-preview" src="images/old_02.png" alt="old_02" width="80" height="60">
+                        <span>Old 02</span>
+                    </button>
+                    <button class="image-btn" data-image="images/tech_01.png">
+                        <img class="image-preview" src="images/tech_01.png" alt="tech_01" width="80" height="60">
+                        <span>Tech 01</span>
+                    </button>
+                    <button class="image-btn" data-image="images/tech_02.png">
+                        <img class="image-preview" src="images/tech_02.png" alt="tech_02" width="80" height="60">
+                        <span>Tech 02</span>
+                    </button>
+                    <button class="image-btn" data-image="images/caution_01.png">
+                        <img class="image-preview" src="images/caution_01.png" alt="caution_01" width="80" height="60">
+                        <span>Caution 01</span>
+                    </button>
+                    <button class="image-btn" data-image="images/caution_02.png">
+                        <img class="image-preview" src="images/caution_02.png" alt="caution_02" width="80" height="60">
+                        <span>Caution 02</span>
+                    </button>
                 </div>
             </div>
 
             <div class="input-group">
-                <label>Frame style:</label>
-                <div class="frame-style-buttons">
-                    <button class="frame-style-btn active" data-frame="solid">
-                        <canvas class="frame-preview" data-frame-type="solid" width="80" height="60"></canvas>
-                        <span>Solid</span>
-                    </button>
-                    <button class="frame-style-btn" data-frame="dashed">
-                        <canvas class="frame-preview" data-frame-type="dashed" width="80" height="60"></canvas>
-                        <span>Dashed</span>
-                    </button>
-                    <button class="frame-style-btn" data-frame="quote">
-                        <canvas class="frame-preview" data-frame-type="quote" width="80" height="60"></canvas>
-                        <span>Quote</span>
-                    </button>
-                    <button class="frame-style-btn" data-frame="caution">
-                        <canvas class="frame-preview" data-frame-type="caution" width="80" height="60"></canvas>
-                        <span>Caution</span>
-                    </button>
-                </div>
+                <label for="textColor" class="color-label">Text color:</label>
+                <input type="color" id="textColor" value="#333333" class="color-input">
             </div>
 
         </div>

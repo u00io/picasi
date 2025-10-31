@@ -2,17 +2,12 @@
 const canvas = document.getElementById('previewCanvas');
 const ctx = canvas.getContext('2d');
 const textInput = document.getElementById('textInput');
-const backgroundColorInput = document.getElementById('backgroundColor');
-const frameColorInput = document.getElementById('frameColor');
 const textColorInput = document.getElementById('textColor');
 const shareBtn = document.getElementById('shareBtn');
 
 // Image parameters
-let backgroundColor = '#ffffff';
-let frameColor = '#4a90e2';
 let textColor = '#333333';
-let frameStyle = 'solid';
-const frameWidth = 8;
+let backgroundImage = ''; // Path to background image, empty string means no image
 const padding = 30;
 
 // Fixed canvas resolution
@@ -65,6 +60,7 @@ function getOptimalFontSize(text, maxWidth, maxHeight, minFontSize = 16, maxFont
                 return;
             }
             
+            // Normal word wrapping
             const words = paragraph.split(' ').filter(word => word.length > 0);
             let currentLine = '';
             
@@ -129,6 +125,7 @@ function wrapText(text, maxWidth, fontSize) {
             return;
         }
         
+        // Normal word wrapping
         // Split paragraph into words
         const words = paragraph.split(' ').filter(word => word.length > 0);
         let currentLine = '';
@@ -172,268 +169,6 @@ function wrapText(text, maxWidth, fontSize) {
     return allLines.length > 0 ? allLines : ['Your text here'];
 }
 
-// Function to draw frame preview on mini canvas (with fixed colors)
-function drawFramePreview(canvasEl, style) {
-    const previewCtx = canvasEl.getContext('2d');
-    const previewWidth = canvasEl.width;
-    const previewHeight = canvasEl.height;
-    
-    // Fixed colors for preview (not from settings)
-    const previewBgColor = '#ffffff';
-    const previewFrameColor = '#667eea';
-    const previewFrameWidth = 3;
-    
-    // Clear and fill background
-    previewCtx.clearRect(0, 0, previewWidth, previewHeight);
-    previewCtx.fillStyle = previewBgColor;
-    previewCtx.fillRect(0, 0, previewWidth, previewHeight);
-    
-    // Set frame color
-    previewCtx.strokeStyle = previewFrameColor;
-    previewCtx.fillStyle = previewFrameColor;
-    previewCtx.lineWidth = previewFrameWidth;
-    
-    const x = previewFrameWidth / 2;
-    const y = previewFrameWidth / 2;
-    const w = previewWidth - previewFrameWidth;
-    const h = previewHeight - previewFrameWidth;
-    
-    switch(style) {
-        case 'solid':
-            previewCtx.strokeRect(x, y, w, h);
-            break;
-            
-        case 'dashed':
-            previewCtx.setLineDash([8, 5]);
-            previewCtx.strokeRect(x, y, w, h);
-            previewCtx.setLineDash([]);
-            break;
-            
-        case 'quote':
-            const lineY1 = y + 10;
-            const lineY2 = y + h - 10;
-            const centerX = x + w / 2;
-            const lineStartX = x + 10;
-            const lineEndX = x + w - 10;
-            const decorationRadius = 2.5;
-            
-            previewCtx.beginPath();
-            previewCtx.moveTo(lineStartX, lineY1);
-            previewCtx.lineTo(centerX - 8, lineY1);
-            previewCtx.stroke();
-            
-            previewCtx.beginPath();
-            previewCtx.arc(centerX, lineY1, decorationRadius, 0, Math.PI * 2);
-            previewCtx.fill();
-            
-            previewCtx.beginPath();
-            previewCtx.moveTo(centerX + 8, lineY1);
-            previewCtx.lineTo(lineEndX, lineY1);
-            previewCtx.stroke();
-            
-            previewCtx.beginPath();
-            previewCtx.moveTo(lineStartX, lineY2);
-            previewCtx.lineTo(centerX - 8, lineY2);
-            previewCtx.stroke();
-            
-            previewCtx.beginPath();
-            previewCtx.arc(centerX, lineY2, decorationRadius, 0, Math.PI * 2);
-            previewCtx.fill();
-            
-            previewCtx.beginPath();
-            previewCtx.moveTo(centerX + 8, lineY2);
-            previewCtx.lineTo(lineEndX, lineY2);
-            previewCtx.stroke();
-            break;
-            
-        case 'caution':
-            const tapeWidth = 8;
-            const stripeWidth = 4;
-            const angle = 35;
-            const angleRad = angle * Math.PI / 180;
-            const yellowColor = '#ffd700';
-            const blackColor = '#000000';
-            
-            previewCtx.lineWidth = 1;
-            previewCtx.save();
-            
-            previewCtx.beginPath();
-            previewCtx.rect(x - tapeWidth, y - tapeWidth, w + tapeWidth * 2, h + tapeWidth * 2);
-            previewCtx.rect(x + tapeWidth, y + tapeWidth, w - tapeWidth * 2, h - tapeWidth * 2);
-            previewCtx.clip('evenodd');
-            
-            const tapeCenterX = x + w / 2;
-            const tapeCenterY = y + h / 2;
-            
-            const maxDim = Math.max(w + tapeWidth * 2, h + tapeWidth * 2);
-            const diagonalLength = Math.sqrt(2) * maxDim;
-            const numStripes = Math.ceil(diagonalLength / stripeWidth) + 2;
-            const startOffset = -numStripes * stripeWidth / 2;
-            
-            for (let i = 0; i < numStripes; i++) {
-                const offset = startOffset + i * stripeWidth;
-                const isYellow = i % 2 === 0;
-                previewCtx.fillStyle = isYellow ? yellowColor : blackColor;
-                
-                const stripeLength = diagonalLength * 2;
-                const halfLength = stripeLength / 2;
-                
-                previewCtx.save();
-                previewCtx.translate(tapeCenterX, tapeCenterY);
-                previewCtx.rotate(angleRad);
-                
-                previewCtx.beginPath();
-                previewCtx.rect(-halfLength, offset - stripeWidth / 2, stripeLength, stripeWidth);
-                previewCtx.fill();
-                
-                previewCtx.restore();
-            }
-            
-            previewCtx.restore();
-            break;
-    }
-}
-
-// Functions for drawing different frame types
-function drawFrame(style) {
-    // Reset any previous clipping path - start fresh
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, canvas.width, canvas.height);
-    ctx.clip();
-    ctx.restore();
-    
-    // Save context state before drawing frame
-    ctx.save();
-    
-    ctx.strokeStyle = frameColor;
-    ctx.fillStyle = frameColor;
-    ctx.lineWidth = frameWidth;
-    
-    const x = frameWidth / 2;
-    const y = frameWidth / 2;
-    const w = canvas.width - frameWidth;
-    const h = canvas.height - frameWidth;
-    
-    switch(style) {
-        case 'solid':
-            ctx.setLineDash([]);
-            ctx.strokeRect(x, y, w, h);
-            break;
-            
-        case 'dashed':
-            ctx.setLineDash([15, 10]);
-            ctx.strokeRect(x, y, w, h);
-            ctx.setLineDash([]);
-            break;
-            
-        case 'quote':
-            ctx.setLineDash([]);
-            const lineY1 = y + 20; // Top line
-            const lineY2 = y + h - 20; // Bottom line
-            const centerX = x + w / 2;
-            const lineStartX = x + 30;
-            const lineEndX = x + w - 30;
-            const decorationRadius = 5;
-            
-            // Top line left of decoration
-            ctx.beginPath();
-            ctx.moveTo(lineStartX, lineY1);
-            ctx.lineTo(centerX - 15, lineY1);
-            ctx.stroke();
-            
-            // Decorative element at top (circle)
-            ctx.beginPath();
-            ctx.arc(centerX, lineY1, decorationRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Top line right of decoration
-            ctx.beginPath();
-            ctx.moveTo(centerX + 15, lineY1);
-            ctx.lineTo(lineEndX, lineY1);
-            ctx.stroke();
-            
-            // Bottom line left of decoration
-            ctx.beginPath();
-            ctx.moveTo(lineStartX, lineY2);
-            ctx.lineTo(centerX - 15, lineY2);
-            ctx.stroke();
-            
-            // Decorative element at bottom (circle)
-            ctx.beginPath();
-            ctx.arc(centerX, lineY2, decorationRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Bottom line right of decoration
-            ctx.beginPath();
-            ctx.moveTo(centerX + 15, lineY2);
-            ctx.lineTo(lineEndX, lineY2);
-            ctx.stroke();
-            break;
-            
-        case 'caution':
-            const tapeWidth = 20; // Tape width at the edge
-            const stripeWidth = 10; // Width of each stripe
-            const angle = 35; // Angle in degrees (not 45 to make it more noticeable)
-            const angleRad = angle * Math.PI / 180;
-            const yellowColor = '#ffd700'; // Yellow color
-            const blackColor = '#000000'; // Black color
-            
-            ctx.lineWidth = 1;
-            ctx.save();
-            
-            // Create drawing area - ring around the edge
-            ctx.beginPath();
-            ctx.rect(x - tapeWidth, y - tapeWidth, w + tapeWidth * 2, h + tapeWidth * 2);
-            ctx.rect(x + tapeWidth, y + tapeWidth, w - tapeWidth * 2, h - tapeWidth * 2);
-            ctx.clip('evenodd');
-            
-            // Move origin to center for convenience
-            const tapeCenterX = x + w / 2;
-            const tapeCenterY = y + h / 2;
-            
-            // Draw diagonal stripes covering the entire area
-            // Calculate number of stripes needed to cover the entire area
-            const maxDim = Math.max(w + tapeWidth * 2, h + tapeWidth * 2);
-            const diagonalLength = Math.sqrt(2) * maxDim;
-            const numStripes = Math.ceil(diagonalLength / stripeWidth) + 2;
-            
-            // Calculate offset for stripe start
-            const startOffset = -numStripes * stripeWidth / 2;
-            
-            for (let i = 0; i < numStripes; i++) {
-                const offset = startOffset + i * stripeWidth; // Remove multiplication by 2 so stripes are continuous without gaps
-                const isYellow = i % 2 === 0;
-                ctx.fillStyle = isYellow ? yellowColor : blackColor;
-                
-                // Draw slanted stripe covering the entire visible area
-                // Use large parallelogram at an angle
-                const stripeLength = diagonalLength * 2;
-                const halfLength = stripeLength / 2;
-                
-                ctx.save();
-                ctx.translate(tapeCenterX, tapeCenterY);
-                ctx.rotate(angleRad);
-                
-                ctx.beginPath();
-                ctx.rect(-halfLength, offset - stripeWidth / 2, stripeLength, stripeWidth);
-                ctx.fill();
-                
-                ctx.restore();
-            }
-            
-            ctx.restore();
-            // Restore frame drawing parameters after clipping
-            ctx.fillStyle = frameColor;
-            ctx.strokeStyle = frameColor;
-            ctx.lineWidth = frameWidth;
-            ctx.setLineDash([]);
-            break;
-    }
-    
-    // Restore context state after drawing frame
-    ctx.restore();
-}
 
 // Function to draw image
 function drawImage() {
@@ -450,22 +185,51 @@ function drawImage() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw background
-    ctx.fillStyle = backgroundColor;
+    // Load and draw background image
+    if (backgroundImage) {
+        const img = new Image();
+        // Only set crossOrigin for HTTP/HTTPS, not for file:// protocol
+        if (window.location.protocol !== 'file:') {
+            img.crossOrigin = "anonymous"; // Allow canvas export with CORS
+        }
+        img.onload = () => {
+            ctx.restore();
+            ctx.save();
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Draw text on top of image
+            drawTextOnCanvas();
+        };
+        img.onerror = () => {
+            // If image fails to load, show white background
+            ctx.restore();
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawTextOnCanvas();
+        };
+        img.src = backgroundImage;
+        return; // Exit early, text will be drawn in onload callback
+    } else {
+        // No image selected - show white background
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Restore and save again before drawing frame
-    ctx.restore();
-    
-    // Draw frame (it will manage its own clipping and state)
-    drawFrame(frameStyle);
-    
-    // Save state for text drawing
+        ctx.restore();
+        ctx.save();
+        
+        // Draw text
+        drawTextOnCanvas();
+    }
+}
+
+// Function to draw text (extracted for reuse)
+function drawTextOnCanvas() {
     ctx.save();
     
-    // Text area (with offsets from frame and padding)
-    const textAreaWidth = canvas.width - (frameWidth + padding) * 2;
-    const textAreaHeight = canvas.height - (frameWidth + padding) * 2;
+    const text = textInput.value.trim() || 'Your text here';
+    
+    // Text area (with padding)
+    const textAreaWidth = canvas.width - padding * 2;
+    const textAreaHeight = canvas.height - padding * 2;
     
     // Get optimal font size
     const fontSize = getOptimalFontSize(text, textAreaWidth, textAreaHeight);
@@ -491,24 +255,11 @@ function drawImage() {
         ctx.fillText(line, startX, y);
     });
     
-    // Restore context state
     ctx.restore();
 }
 
 // Text input handler
 textInput.addEventListener('input', drawImage);
-
-// Background color change handler
-backgroundColorInput.addEventListener('input', (e) => {
-    backgroundColor = e.target.value;
-    drawImage();
-});
-
-// Frame color change handler
-frameColorInput.addEventListener('input', (e) => {
-    frameColor = e.target.value;
-    drawImage();
-});
 
 // Text color change handler
 textColorInput.addEventListener('input', (e) => {
@@ -516,70 +267,101 @@ textColorInput.addEventListener('input', (e) => {
     drawImage();
 });
 
-// Frame style selection handlers
-const frameStyleButtons = document.querySelectorAll('.frame-style-btn');
-frameStyleButtons.forEach(btn => {
+// Background image selection handlers
+const imageButtons = document.querySelectorAll('.image-btn');
+imageButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
-        frameStyleButtons.forEach(b => b.classList.remove('active'));
-        // Use currentTarget instead of target to always get the button, not child elements
+        imageButtons.forEach(b => b.classList.remove('active'));
         const button = e.currentTarget;
         button.classList.add('active');
-        frameStyle = button.dataset.frame;
+        backgroundImage = button.dataset.image || '';
         drawImage();
     });
 });
 
+
 // Function to download image
 function downloadImage() {
-    canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
+    // Try toBlob first (may throw SecurityError for tainted canvas)
+    try {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                // Fallback to toDataURL if blob is null
+                fallbackToDataURL();
+                return;
+            }
+            try {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `social-image-${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                fallbackToDataURL();
+            }
+        }, 'image/png');
+    } catch (e) {
+        // Fallback to toDataURL if toBlob throws synchronously (tainted canvas)
+        fallbackToDataURL();
+    }
+}
+
+// Fallback function to use toDataURL
+function fallbackToDataURL() {
+    try {
+        const dataUrl = canvas.toDataURL('image/png');
         const a = document.createElement('a');
-        a.href = url;
+        a.href = dataUrl;
         a.download = `social-image-${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }, 'image/png');
+    } catch (err) {
+        // If both methods fail, show alert
+        alert('Cannot export image due to browser security restrictions.\n\nPlease use a local web server:\n- Python: python -m http.server 8000\n- Node.js: npx http-server\n- VS Code: Live Server extension\n\nThen open http://localhost:8000 instead of file://');
+    }
 }
 
 // Function to share image
 function shareImage() {
-    canvas.toBlob((blob) => {
-        const file = new File([blob], 'social-image.png', { type: 'image/png' });
-        
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({
-                title: 'Social media image',
-                files: [file]
-            }).catch(err => {
-                console.log('Share error:', err);
+    try {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                // Fallback to download if toBlob fails
                 downloadImage();
-            });
-        } else {
-            // Fallback: download the image
+                return;
+            }
+            const file = new File([blob], 'social-image.png', { type: 'image/png' });
+            
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    title: 'Social media image',
+                    files: [file]
+                }).catch(err => {
+                    console.log('Share error:', err);
+                    downloadImage();
+                });
+            } else {
+                // Fallback: download the image
                 downloadImage();
-        }
-    }, 'image/png');
+            }
+        }, 'image/png');
+    } catch (e) {
+        // Fallback to download if toBlob fails
+        downloadImage();
+    }
 }
 
 // Button handler
 shareBtn.addEventListener('click', shareImage);
 
-// Initialize frame previews
-function initFramePreviews() {
-    const previewCanvases = document.querySelectorAll('.frame-preview');
-    previewCanvases.forEach(canvas => {
-        const frameType = canvas.dataset.frameType;
-        drawFramePreview(canvas, frameType);
-    });
-}
-
 // Initialize on page load
 window.addEventListener('load', () => {
     initCanvas();
     drawImage();
-    initFramePreviews();
 });
 
 // Redraw on window resize (only scale preview)
